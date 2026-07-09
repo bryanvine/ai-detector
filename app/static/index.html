@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DETECTOR — is it AI-generated?</title>
+<meta name="description" content="Forensic analysis of text, documents and images: probability the content was AI-generated, with per-signal evidence.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700;9..144,900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◉</text></svg>">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="masthead">
+  <div class="wordmark">
+    <span class="dot" aria-hidden="true"></span>
+    <h1>DETECTOR</h1>
+    <span class="unit">vineai&nbsp;·&nbsp;synthetic&nbsp;media&nbsp;forensics</span>
+  </div>
+  <nav class="masthead-meta">
+    <span id="stat-line" class="stat-line">—</span>
+  </nav>
+</header>
+
+<main class="bench">
+  <!-- ================= INPUT CONSOLE ================= -->
+  <section class="console" aria-label="Submit evidence">
+    <div class="console-head">
+      <span class="specimen-no">SPECIMEN INTAKE</span>
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" aria-selected="true" data-mode="text">Text</button>
+        <button class="tab" role="tab" aria-selected="false" data-mode="document">Document</button>
+        <button class="tab" role="tab" aria-selected="false" data-mode="image">Image</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-text" role="tabpanel">
+      <textarea id="text-input" spellcheck="false"
+        placeholder="Paste the text in question — at least 120 characters. Essays, emails, posts, cover letters, reviews…"></textarea>
+      <div class="panel-foot">
+        <span id="char-count" class="mono-dim">0 chars</span>
+        <span class="mono-dim">min 120 · max 60,000</span>
+      </div>
+    </div>
+
+    <div class="panel drop-panel hidden" id="panel-document" role="tabpanel">
+      <div class="dropzone" id="drop-document" tabindex="0">
+        <div class="drop-glyph" aria-hidden="true">⧉</div>
+        <p><strong>Drop a document</strong> or click to choose</p>
+        <p class="mono-dim">PDF · DOCX · TXT · MD — text is extracted and analyzed. Scanned/image PDFs are not OCRed.</p>
+        <input type="file" id="file-document" accept=".pdf,.docx,.txt,.md,.markdown,.rst" hidden>
+      </div>
+    </div>
+
+    <div class="panel drop-panel hidden" id="panel-image" role="tabpanel">
+      <div class="dropzone" id="drop-image" tabindex="0">
+        <div class="drop-glyph" aria-hidden="true">▣</div>
+        <p><strong>Drop an image</strong> or click to choose</p>
+        <p class="mono-dim">PNG · JPEG · WEBP · TIFF — provenance metadata, spectral &amp; noise forensics, ML classifier.</p>
+        <input type="file" id="file-image" accept="image/*" hidden>
+      </div>
+      <img id="image-preview" class="hidden" alt="preview of the submitted image">
+    </div>
+
+    <div class="file-chip hidden" id="file-chip">
+      <span id="file-name" class="mono"></span>
+      <button id="file-clear" title="remove file" aria-label="remove file">✕</button>
+    </div>
+
+    <button id="analyze-btn" class="analyze" disabled>
+      <span class="btn-label">RUN ANALYSIS</span>
+      <span class="btn-sub" id="btn-sub">awaiting specimen</span>
+    </button>
+
+    <div id="error-box" class="error hidden" role="alert"></div>
+
+    <aside class="method-note">
+      <h3>Method</h3>
+      <p>Text is scored token-by-token under open-weight language models
+      (<span class="mono">qwen3-30b-tq</span>, <span class="mono">gpt-oss-120b</span>) —
+      perplexity, rank and rhythm statistics — plus stylometry and an LLM judge.
+      Images are checked for generator provenance (C2PA, SD/ComfyUI chunks),
+      frequency-domain and sensor-noise fingerprints, and a learned classifier.
+      Signals fuse into one calibrated probability. <strong>No detector is perfect;</strong>
+      treat scores near 50% as genuinely uncertain.</p>
+    </aside>
+  </section>
+
+  <!-- ================= VERDICT ================= -->
+  <section class="verdict" aria-label="Verdict" aria-live="polite">
+    <div class="verdict-idle" id="verdict-idle">
+      <div class="idle-ring" aria-hidden="true">
+        <svg viewBox="0 0 200 110">
+          <path d="M15 100 A 85 85 0 0 1 185 100" fill="none" stroke="var(--hairline)" stroke-width="8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <p class="idle-copy">Submit a specimen.<br>The verdict renders here.</p>
+    </div>
+
+    <div class="verdict-live hidden" id="verdict-live">
+      <div class="gauge-wrap">
+        <svg class="gauge" viewBox="0 0 200 110" aria-hidden="true">
+          <defs>
+            <linearGradient id="arc-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"  stop-color="var(--human)"/>
+              <stop offset="50%" stop-color="#c8b46a"/>
+              <stop offset="100%" stop-color="var(--ai)"/>
+            </linearGradient>
+          </defs>
+          <path d="M15 100 A 85 85 0 0 1 185 100" fill="none" stroke="var(--hairline)" stroke-width="8" stroke-linecap="round"/>
+          <path id="gauge-arc" d="M15 100 A 85 85 0 0 1 185 100" fill="none" stroke="url(#arc-grad)"
+                stroke-width="8" stroke-linecap="round" pathLength="100"
+                stroke-dasharray="100" stroke-dashoffset="100"/>
+          <g id="needle" transform="rotate(-90 100 100)">
+            <line x1="100" y1="100" x2="100" y2="26" stroke="var(--bone)" stroke-width="2.5"/>
+            <circle cx="100" cy="100" r="5" fill="var(--bone)"/>
+          </g>
+        </svg>
+        <div class="gauge-poles mono-dim" aria-hidden="true"><span>HUMAN</span><span>SYNTHETIC</span></div>
+      </div>
+
+      <div class="reading">
+        <div class="pct"><span id="pct-num">0</span><span class="pct-sign">%</span></div>
+        <div class="pct-caption mono-dim">likelihood AI-generated</div>
+        <div id="stamp" class="stamp">INCONCLUSIVE</div>
+        <div class="conf mono-dim">confidence: <span id="conf"></span> · <span id="took"></span></div>
+      </div>
+
+      <div class="evidence">
+        <h3 class="evidence-head">EVIDENCE <span class="mono-dim" id="evidence-count"></span></h3>
+        <ol id="signal-list" class="signals"></ol>
+      </div>
+
+      <div class="feedback" id="feedback-box">
+        <h3>Do you know the truth?</h3>
+        <p class="mono-dim">Your label joins the training ledger and improves the detector.</p>
+        <div class="stamps" id="stamp-buttons">
+          <button data-truth="human">HUMAN-MADE</button>
+          <button data-truth="ai">AI-GENERATED</button>
+          <button data-truth="mixed">MIXED</button>
+          <button data-truth="unsure">UNSURE</button>
+        </div>
+        <div class="feedback-extra hidden" id="feedback-extra">
+          <input id="source-hint" maxlength="200" placeholder="source, if known — e.g. “GPT-5”, “my own writing”">
+          <button id="feedback-send">LOG IT</button>
+        </div>
+        <p class="feedback-done hidden" id="feedback-done">◉ Logged. Thank you — filed for training.</p>
+      </div>
+    </div>
+
+    <div class="scanner hidden" id="scanner">
+      <div class="scanline"></div>
+      <p class="mono" id="scan-status">initializing…</p>
+    </div>
+  </section>
+</main>
+
+<footer class="colophon">
+  <span>DETECTOR runs on open-weight models via a local inference router. Content you submit is stored with your feedback to retrain the system.</span>
+  <a href="https://github.com/bryanvine/ai-detector" rel="noopener">source ↗</a>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
