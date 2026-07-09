@@ -18,6 +18,10 @@ from . import config
 
 _local = threading.local()
 
+
+class FeedbackExists(Exception):
+    """Ground truth was already recorded for this analysis."""
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS analyses (
     id           TEXT PRIMARY KEY,
@@ -80,6 +84,16 @@ def init() -> None:
             " error = 'Interrupted by a service restart — please resubmit.'"
             " WHERE status = 'processing'"
         )
+        # One ground-truth label per analysis: drop any historical dupes
+        # (keeping the earliest), then enforce going forward.
+        conn.execute(
+            "DELETE FROM feedback WHERE rowid NOT IN"
+            " (SELECT MIN(rowid) FROM feedback GROUP BY analysis_id)"
+        )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_once"
+            " ON feedback(analysis_id)"
+        )
 
 
 def update_analysis(analysis_id: str, *, result: dict | None, status: str,
@@ -127,12 +141,15 @@ def insert_feedback(
         raise KeyError(analysis_id)
     fid = uuid.uuid4().hex[:16]
     conn = _conn()
-    with conn:
-        conn.execute(
-            "INSERT INTO feedback VALUES (?,?,?,?,?,?,?)",
-            (fid, analysis_id, time.time(), ground_truth,
-             (source_hint or "")[:200], (comment or "")[:2000], client_ip),
-        )
+    try:
+        with conn:
+            conn.execute(
+                "INSERT INTO feedback VALUES (?,?,?,?,?,?,?)",
+                (fid, analysis_id, time.time(), ground_truth,
+                 (source_hint or "")[:200], (comment or "")[:2000], client_ip),
+            )
+    except sqlite3.IntegrityError:
+        raise FeedbackExists(analysis_id)
     return fid
 
 

@@ -80,7 +80,16 @@ GET  /api/analysis/{id}    re-fetch a verdict / poll a video job
 GET  /api/stats            counters
 GET  /api/export.jsonl     labelled dataset (auth)
 GET  /api/health
+
+GET  /r/{id}               shareable verdict permalink (server-rendered, OG tags)
+GET  /og/{id}.png          social-unfurl card image (gauge + percent + stamp)
+GET  /content/{id}         the analyzed specimen — served for IMAGES only;
+                           submitted text, documents and video are never exposed
 ```
+
+Analysis ids are unguessable (64-bit); a verdict is only visible to someone
+given its link. Ground-truth feedback is accepted **once** per analysis
+(enforced by a unique index; duplicates get HTTP 409).
 
 ## Quick start
 

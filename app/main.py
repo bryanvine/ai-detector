@@ -19,13 +19,14 @@ from collections import defaultdict, deque
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               RedirectResponse, Response, StreamingResponse)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import threading
 
-from . import config, db, ensemble
+from . import config, db, ensemble, share
 from .detectors import document, image_forensics, image_ml, text_llm, text_stats, video
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -224,6 +225,8 @@ async def feedback(body: FeedbackIn, request: Request):
         )
     except KeyError:
         raise HTTPException(404, "Unknown analysis id.")
+    except db.FeedbackExists:
+        raise HTTPException(409, "Ground truth was already recorded for this analysis.")
     return {"ok": True, "feedback_id": fid, "thanks": True}
 
 
@@ -239,6 +242,9 @@ async def get_analysis(analysis_id: str):
         raise HTTPException(404, "Unknown analysis id.")
     d = dict(row)
     d["signals"] = _json.loads(d.pop("signals_json"))
+    d["has_feedback"] = db._conn().execute(
+        "SELECT 1 FROM feedback WHERE analysis_id = ?", (analysis_id,)
+    ).fetchone() is not None
     return d
 
 
@@ -269,6 +275,57 @@ async def health():
     return {"ok": True, "service": "ai-detector"}
 
 
+# ------------------------------------------------------------- share links
+def _site_base(request: Request) -> str:
+    host = request.headers.get("host", request.url.netloc)
+    scheme = "https" if request.headers.get("cf-connecting-ip") else request.url.scheme
+    return f"{scheme}://{host}"
+
+
+@app.get("/r/{analysis_id}", response_class=HTMLResponse)
+async def shared_verdict(analysis_id: str, request: Request):
+    analysis = share.load_analysis(db._conn(), analysis_id[:32])
+    if analysis is None:
+        raise HTTPException(404, "Unknown verdict link.")
+    if analysis["status"] != "done" or analysis["percent"] is None:
+        return RedirectResponse("/", status_code=302)
+    return HTMLResponse(share.share_page(analysis, _site_base(request)))
+
+
+@app.get("/content/{analysis_id}")
+async def shared_content(analysis_id: str):
+    """The submitted specimen itself — served for IMAGE analyses only.
+    Text, documents and video are never exposed on shared verdicts."""
+    row = db._conn().execute(
+        "SELECT kind, status, content_path FROM analyses WHERE id = ?",
+        (analysis_id[:32],),
+    ).fetchone()
+    if row is None or row["kind"] != "image" or row["status"] != "done" \
+            or not row["content_path"]:
+        raise HTTPException(404, "No shareable content for this id.")
+    path = config.DATA_DIR / row["content_path"]
+    if not path.exists():
+        raise HTTPException(404, "Content no longer stored.")
+    import mimetypes
+
+    mime = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
+    if not mime.startswith("image/"):
+        raise HTTPException(404, "No shareable content for this id.")
+    return FileResponse(path, media_type=mime)
+
+
+@app.get("/og/{analysis_id}.png")
+async def og_image(analysis_id: str):
+    analysis = share.load_analysis(db._conn(), analysis_id[:32])
+    if analysis is None or analysis["status"] != "done" or analysis["percent"] is None:
+        raise HTTPException(404, "No card for this id.")
+    cache = config.DATA_DIR / "og" / f"{analysis['id']}.png"
+    if not cache.exists():
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_bytes(share.og_card(analysis))
+    return FileResponse(cache, media_type="image/png")
+
+
 @app.middleware("http")
 async def ui_cache_headers(request: Request, call_next):
     """Keep Cloudflare and browsers from pinning stale UI assets (CF caches
@@ -278,7 +335,10 @@ async def ui_cache_headers(request: Request, call_next):
     path = request.url.path
     if path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
-    elif path == "/" or path.endswith((".js", ".css", ".html")):
+    elif path.startswith(("/og/", "/content/")):
+        # verdicts are immutable once done; let crawlers/CDN keep the card
+        response.headers["Cache-Control"] = "public, max-age=86400"
+    elif path == "/" or path.startswith("/r/") or path.endswith((".js", ".css", ".html")):
         response.headers["Cache-Control"] = "no-cache"
     return response
 

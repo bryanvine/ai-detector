@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700;9..144,900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=4">
+<link rel="stylesheet" href="/styles.css?v=5">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◉</text></svg>">
 </head>
 <body>
@@ -151,6 +151,14 @@
         <ol id="signal-list" class="signals"></ol>
       </div>
 
+      <div class="share-row" id="share-row">
+        <span class="mono-dim">SHARE VERDICT</span>
+        <button id="share-copy" title="copy permalink">COPY LINK</button>
+        <button id="share-native" class="hidden" title="share">SHARE…</button>
+        <a id="share-x" target="_blank" rel="noopener">POST TO X</a>
+        <a id="share-li" target="_blank" rel="noopener">LINKEDIN</a>
+      </div>
+
       <div class="feedback" id="feedback-box">
         <h3>Do you know the truth?</h3>
         <p class="mono-dim">Your label joins the training ledger and improves the detector.</p>
@@ -180,6 +188,6 @@
   <a href="https://github.com/bryanvine/ai-detector" rel="noopener">source ↗</a>
 </footer>
 
-<script src="/app.js?v=4"></script>
+<script src="/app.js?v=5"></script>
 </body>
 </html>

@@ -313,7 +313,22 @@ function renderVerdict(data, elapsedMs) {
       list.appendChild(li);
     });
 
-  // reset feedback widget
+  // share links
+  const shareUrl = `${location.origin}/r/${data.id}`;
+  const shareText = `This ${data.kind || "content"} scored ${pct}% likely AI-generated on DETECTOR`;
+  $("share-x").href =
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+  $("share-li").href =
+    `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+  state.shareUrl = shareUrl;
+  state.shareText = shareText;
+  const copyBtn = $("share-copy");
+  copyBtn.textContent = "COPY LINK";
+  copyBtn.classList.remove("done");
+  $("share-native").classList.toggle("hidden", !navigator.share);
+
+  // reset feedback widget (hidden entirely if ground truth already recorded)
+  $("feedback-box").classList.toggle("hidden", !!data.has_feedback);
   $("feedback-done").classList.add("hidden");
   $("feedback-extra").classList.add("hidden");
   $("stamp-buttons").classList.remove("hidden");
@@ -359,6 +374,13 @@ $("feedback-send").addEventListener("click", async () => {
         source_hint: $("source-hint").value.trim() || null,
       }),
     });
+    if (resp.status === 409) {
+      $("feedback-extra").classList.add("hidden");
+      $("stamp-buttons").classList.add("hidden");
+      $("feedback-done").textContent = "◉ Ground truth was already recorded for this analysis.";
+      $("feedback-done").classList.remove("hidden");
+      return;
+    }
     if (!resp.ok) throw new Error("feedback failed");
     $("feedback-extra").classList.add("hidden");
     $("stamp-buttons").classList.add("hidden");
@@ -366,6 +388,29 @@ $("feedback-send").addEventListener("click", async () => {
     loadStats();
   } catch {
     showError("Could not record feedback — try again.");
+  }
+});
+
+/* ---------------- share ---------------- */
+$("share-copy").addEventListener("click", async () => {
+  if (!state.shareUrl) return;
+  try {
+    await navigator.clipboard.writeText(state.shareUrl);
+    $("share-copy").textContent = "COPIED ✓";
+    $("share-copy").classList.add("done");
+    setTimeout(() => {
+      $("share-copy").textContent = "COPY LINK";
+      $("share-copy").classList.remove("done");
+    }, 2200);
+  } catch {
+    prompt("Copy this link:", state.shareUrl);
+  }
+});
+
+$("share-native").addEventListener("click", () => {
+  if (state.shareUrl && navigator.share) {
+    navigator.share({ title: "DETECTOR verdict", text: state.shareText, url: state.shareUrl })
+      .catch(() => {});
   }
 });
 
