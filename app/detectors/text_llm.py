@@ -1,4 +1,4 @@
-"""Model-based text signals via the ai-router gateway.
+"""Model-based text signals via the configured OpenAI-compatible endpoint.
 
 Three independent families:
 

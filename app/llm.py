@@ -1,4 +1,5 @@
-"""Async client for the ai-router LiteLLM gateway (OpenAI-compatible).
+"""Async client for the configured OpenAI-compatible LLM endpoint
+(vLLM directly, or through a gateway like LiteLLM / Open WebUI).
 
 Two capabilities are used:
   * prompt scoring — vLLM's `echo=true, max_tokens=0, logprobs=1` returns

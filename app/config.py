@@ -18,7 +18,7 @@ def _load_dotenv() -> None:
 
 _load_dotenv()
 
-ROUTER_BASE_URL = os.environ.get("ROUTER_BASE_URL", "http://127.0.0.1:24001/v1").rstrip("/")
+ROUTER_BASE_URL = os.environ.get("ROUTER_BASE_URL", "http://localhost:8000/v1").rstrip("/")
 ROUTER_API_KEY = os.environ.get("ROUTER_API_KEY", "")
 
 SCORING_MODEL = os.environ.get("SCORING_MODEL", "qwen3-30b-tq")
@@ -33,9 +33,9 @@ IMAGE_ML_MODEL = os.environ.get("IMAGE_ML_MODEL", "Organika/sdxl-detector")
 # shows it beats the fallback.
 VIDEO_FRAME_MODEL = os.environ.get("VIDEO_FRAME_MODEL", "")
 
-# Shared-GPU policy: classifier uses the RTX 5060 only when at least this much
-# VRAM is free (arch-router + training own the card), and evicts itself back to
-# CPU after this many idle seconds.
+# Shared-GPU policy: classifiers use CUDA only when at least this much VRAM is
+# free (the card may be shared with other workloads), and evict themselves back
+# to CPU after this many idle seconds.
 GPU_MIN_FREE_MB = int(os.environ.get("GPU_MIN_FREE_MB", "2500"))
 GPU_IDLE_EVICT_S = int(os.environ.get("GPU_IDLE_EVICT_S", "600"))
 
@@ -50,7 +50,7 @@ DATA_DIR = Path(os.environ.get("DATA_DIR", "./data")).resolve()
 UPLOAD_DIR = DATA_DIR / "uploads"
 
 HOST = os.environ.get("HOST", "127.0.0.1")
-PORT = int(os.environ.get("PORT", "27000"))
+PORT = int(os.environ.get("PORT", "8080"))
 RATE_LIMIT_PER_MIN = int(os.environ.get("RATE_LIMIT_PER_MIN", "10"))
 EXPORT_TOKEN = os.environ.get("EXPORT_TOKEN", "")
 

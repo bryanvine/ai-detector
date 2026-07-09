@@ -16,7 +16,7 @@ trained** — the app keeps using the capped image-model fallback until
 .venv/bin/python training/build_frames.py
 
 # 3. Train (Swin-tiny base). GPU-gated: refuses to start unless >=3GB VRAM
-#    free so it never fights arch-router or a training run. ~20-40 min GPU.
+#    free so it never fights other tenants of the card. ~20-40 min GPU.
 .venv/bin/python training/train.py            # add --cpu for overnight CPU
 .venv/bin/python training/train.py --holdout-generator sora   # generalization check
 
@@ -25,9 +25,8 @@ trained** — the app keeps using the capped image-model fallback until
 .venv/bin/python training/evaluate.py
 .venv/bin/python training/evaluate.py --clips /tmp/vidtest data/uploads
 
-# 5. Only if eval is convincing: activate in .env and restart
+# 5. Only if eval is convincing: activate in .env and restart the app
 #    VIDEO_FRAME_MODEL=./models/video-frame-detector
-sudo systemctl restart ai-detector
 ```
 
 Smoke test any time (2 batches, CPU, no GPU touch):

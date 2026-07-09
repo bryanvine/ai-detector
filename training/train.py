@@ -162,7 +162,7 @@ def main() -> int:
         free = gpu_free_mb()
         if not torch.cuda.is_available() or free < args.min_free_mb:
             sys.exit(f"GPU gate: {free}MB free < {args.min_free_mb}MB required "
-                     "(arch-router/training own the card). Re-run when free, or --cpu.")
+                     "(other workloads own the card). Re-run when free, or --cpu.")
         device = "cuda"
 
     processor = AutoImageProcessor.from_pretrained(args.base)

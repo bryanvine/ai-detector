@@ -7,8 +7,8 @@ Two slots:
     video frames fall back to the image model (capped upstream in video.py,
     since it's out-of-domain there).
 
-Device policy — the RTX 5060 is shared with arch-router and training jobs, so
-we are strictly a guest on it: free-VRAM gate before each run (nvidia-smi, no
+Device policy — the GPU may be shared with other workloads, so we are strictly
+a guest on it: free-VRAM gate before each run (nvidia-smi, no
 CUDA context), CUDA OOM falls back to CPU, and models evict themselves to CPU
 after GPU_IDLE_EVICT_S without use. Weights stay fp32 (~350MB; the pipeline
 doesn't cast inputs for half models, and fp32 on GPU is still ~30x CPU here).

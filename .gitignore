@@ -6,3 +6,4 @@ __pycache__/
 data/
 *.log
 .DS_Store
+scripts/local/
