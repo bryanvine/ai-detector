@@ -282,11 +282,15 @@ def _temporal_signal(bursts: list[list[Path]]) -> Signal:
 def _context_signals(probe: dict, duration: float) -> list[Signal]:
     """Circumstantial evidence — deliberately tiny weights, honest labels."""
     signals = []
+    # NB: audio/length are weak-and-weakening priors — Veo-3-era generators
+    # produce audio and long-form output (confirmed by a labeled miss on
+    # 2026-07-09), so their "human" pull is kept close to neutral.
     has_audio = any(s.get("codec_type") == "audio" for s in probe.get("streams", []))
     signals.append(Signal(
-        "audio", "Audio track", 0.28 if has_audio else 0.62, 0.35,
-        "Ambient audio present (typical of capture)" if has_audio
-        else "No audio track (most 2025-era generators output silent clips)",
+        "audio", "Audio track", 0.38 if has_audio else 0.62, 0.35,
+        "Audio present (mild capture evidence — newer generators emit audio too)"
+        if has_audio
+        else "No audio track (most generator output is silent)",
         {"has_audio": has_audio},
     ))
     if duration <= 8:
@@ -297,8 +301,8 @@ def _context_signals(probe: dict, duration: float) -> list[Signal]:
         ))
     elif duration >= 20:
         signals.append(Signal(
-            "duration", "Clip length", 0.35, 0.25,
-            f"{duration:.1f}s — longer than most generators produce",
+            "duration", "Clip length", 0.42, 0.25,
+            f"{duration:.1f}s — long for a generator, but extensions make this weak evidence",
             {"duration_s": duration},
         ))
     else:
