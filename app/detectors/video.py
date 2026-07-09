@@ -168,8 +168,9 @@ def _frame_classifier_signal(frames: list[Path]) -> Signal:
     if not frames:
         return Signal("frame_classifier", "Frame classifier", None, 0, "No frames")
     images = [Image.open(f) for f in frames]
+    in_domain = image_ml.video_model_active()
     try:
-        probs = [p for p in image_ml.classify_batch(images) if p is not None]
+        probs = [p for p in image_ml.classify_batch(images, video=True) if p is not None]
     except Exception as exc:
         return Signal("frame_classifier", "Frame classifier", None, 0,
                       f"Classifier failed ({type(exc).__name__})")
@@ -183,16 +184,21 @@ def _frame_classifier_signal(frames: list[Path]) -> Signal:
     trim = max(len(arr) // 10, 0)
     tmean = float(arr[trim:len(arr) - trim].mean()) if len(arr) > 2 * trim else float(arr.mean())
     frac_ai = float((arr > 0.5).mean())
-    # Blend level and breadth — then CLAMP hard. Validation showed the image
-    # classifier is out-of-domain on compressed video frames (unanimously wrong
-    # in both directions on some clips), so it is never allowed to be certain.
-    score = min(max(0.7 * tmean + 0.3 * frac_ai, 0.15), 0.85)
+    blend = 0.7 * tmean + 0.3 * frac_ai
+    if in_domain:
+        # Fine-tuned on video frames (training/) — allowed to speak with weight.
+        score, weight = min(max(blend, 0.03), 0.97), 1.6
+        note = "fine-tuned video-frame model"
+    else:
+        # Image model on video frames is out-of-domain: unanimously wrong in
+        # both directions on some clips — never allowed to be certain.
+        score, weight = min(max(blend, 0.15), 0.85), 0.5
+        note = "image model on video frames — capped, low trust"
     return Signal(
-        "frame_classifier", "Frame classifier ensemble", score, 0.5,
-        f"{len(arr)} frames: trimmed-mean P(AI) {tmean:.0%}, {frac_ai:.0%} of frames >50% "
-        "(image model on video frames — capped, low trust)",
+        "frame_classifier", "Frame classifier ensemble", score, weight,
+        f"{len(arr)} frames: trimmed-mean P(AI) {tmean:.0%}, {frac_ai:.0%} of frames >50% ({note})",
         {"frames": len(arr), "trimmed_mean": round(tmean, 4),
-         "frac_ai": round(frac_ai, 4)},
+         "frac_ai": round(frac_ai, 4), "in_domain": in_domain},
     )
 
 

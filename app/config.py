@@ -27,6 +27,11 @@ JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "qwen3-30b-tq")
 
 IMAGE_ML_ENABLED = os.environ.get("IMAGE_ML_ENABLED", "1") == "1"
 IMAGE_ML_MODEL = os.environ.get("IMAGE_ML_MODEL", "Organika/sdxl-detector")
+# Fine-tuned video-frame checkpoint (training/train.py output, e.g.
+# ./models/video-frame-detector). Empty = fall back to the image model for
+# video frames (capped/low-trust in the ensemble). Only set after evaluate.py
+# shows it beats the fallback.
+VIDEO_FRAME_MODEL = os.environ.get("VIDEO_FRAME_MODEL", "")
 
 # Shared-GPU policy: classifier uses the RTX 5060 only when at least this much
 # VRAM is free (arch-router + training own the card), and evicts itself back to

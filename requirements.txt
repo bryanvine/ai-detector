@@ -11,3 +11,4 @@ scipy>=1.13
 # Image ML classifier (CPU). Heavy; the app degrades gracefully without them.
 torch>=2.3
 transformers>=4.44
+torchvision>=0.28    # transformers AutoImageProcessor dependency (training/)
