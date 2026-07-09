@@ -136,7 +136,7 @@ async def _judge_signal(text: str) -> Signal:
     p = min(max(float(parsed["probability_ai"]) / 100.0, 0.0), 1.0)
     indicators = [str(i) for i in parsed.get("indicators", [])][:4]
     return Signal(
-        "judge", f"LLM judge ({config.JUDGE_MODEL})", p, 1.0,
+        "judge", f"LLM judge ({config.JUDGE_MODEL})", p, 1.2,
         parsed.get("summary", "") or "; ".join(indicators),
         {"probability_ai": parsed.get("probability_ai"), "indicators": indicators},
     )
@@ -144,11 +144,16 @@ async def _judge_signal(text: str) -> Signal:
 
 async def analyze(text: str) -> list[Signal]:
     """Run all model-based signals concurrently; tolerate individual failures."""
-    body = text[:config.SCORING_MAX_CHARS]
+    from .text_stats import strip_decoration
 
-    primary_task = asyncio.create_task(_primary_signals(body))
+    body = text[:config.SCORING_MAX_CHARS]
+    # Score the prose, not the decoration: emoji tokenize into rare tokens that
+    # inflate perplexity and can mask heavily-decorated AI text as "surprising".
+    score_body = strip_decoration(body)
+
+    primary_task = asyncio.create_task(_primary_signals(score_body))
     secondary_task = asyncio.create_task(
-        llm.score_prompt(body, config.SECONDARY_SCORING_MODEL)
+        llm.score_prompt(score_body, config.SECONDARY_SCORING_MODEL)
     )
     judge_task = asyncio.create_task(_judge_signal(body))
 

@@ -30,6 +30,15 @@ const SCAN_LINES = {
     "running ML classifier…",
     "fusing signals…",
   ],
+  video: [
+    "probing container metadata…",
+    "searching for generator fingerprints…",
+    "extracting sampled frames…",
+    "classifying frames (GPU when free)…",
+    "measuring temporal noise coherence…",
+    "running frame forensics…",
+    "fusing signals — long videos take a minute…",
+  ],
 };
 
 /* ---------------- tabs ---------------- */
@@ -41,7 +50,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
       t.classList.toggle("active", t === tab);
       t.setAttribute("aria-selected", t === tab ? "true" : "false");
     });
-    ["text", "document", "image"].forEach((m) =>
+    ["text", "document", "image", "video"].forEach((m) =>
       $(`panel-${m}`).classList.toggle("hidden", m !== state.mode)
     );
     $("file-chip").classList.add("hidden");
@@ -80,9 +89,12 @@ function wireDropzone(zoneId, inputId) {
 }
 wireDropzone("drop-document", "file-document");
 wireDropzone("drop-image", "file-image");
+wireDropzone("drop-video", "file-video");
 
 function takeFile(file) {
-  if (file.size > 25 * 1024 * 1024) return showError("File too large — 25 MB max.");
+  const maxMb = state.mode === "video" ? 200 : 25;
+  if (file.size > maxMb * 1024 * 1024)
+    return showError(`File too large — ${maxMb} MB max.`);
   state.file = file;
   $("file-name").textContent = `${file.name} · ${(file.size / 1024).toFixed(0)} KB`;
   $("file-chip").classList.remove("hidden");
@@ -157,8 +169,9 @@ async function runAnalysis() {
       form.append("file", state.file);
       resp = await fetch("/api/analyze/file", { method: "POST", body: form });
     }
-    const data = await resp.json();
+    let data = await resp.json();
     if (!resp.ok) throw new Error(data.detail || `Analysis failed (${resp.status})`);
+    if (data.status === "processing") data = await pollJob(data.id);
     renderVerdict(data, performance.now() - t0);
     loadStats();
   } catch (err) {
@@ -167,6 +180,19 @@ async function runAnalysis() {
     state.busy = false;
     stopScanner();
     refreshButton();
+  }
+}
+
+async function pollJob(id, timeoutMs = 5 * 60 * 1000) {
+  const t0 = Date.now();
+  for (;;) {
+    await new Promise((r) => setTimeout(r, 2500));
+    if (Date.now() - t0 > timeoutMs) throw new Error("Analysis timed out — try a shorter clip.");
+    const resp = await fetch(`/api/analysis/${id}`);
+    if (!resp.ok) throw new Error("Lost track of the analysis job.");
+    const data = await resp.json();
+    if (data.status === "error") throw new Error(data.error || "Video analysis failed.");
+    if (data.status === "done") return data;
   }
 }
 

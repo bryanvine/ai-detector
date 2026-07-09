@@ -37,6 +37,24 @@ _LEXICON_RE = re.compile(
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z\"'“(])|\n{2,}")
 _WORD_RE = re.compile(r"[A-Za-zÀ-ɏ']+")
 
+# Emoji / pictograph detection. "Structural" emoji are the checkmark/rocket/
+# sparkle set that assistant output uses as list decoration and headers —
+# far more diagnostic than expressive emoji (😂❤️), which humans spam freely.
+_EMOJI_RE = re.compile(
+    "[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U0001F1E6-\U0001F1FF"
+    "⬀-⯿←-⇿✅✔✖❌❗]"
+)
+_STRUCT_EMOJI = set(
+    "✅✔☑🚀✨💡🎯📌📍📈📊🔍⚡🔑🌟⭐❗⚠➡→👉🔥💪🧠📝🎉🛠🧩📣🏆❌"
+)
+
+
+def strip_decoration(text: str) -> str:
+    """Remove emoji/pictographs (for logprob scoring: rare emoji tokens inflate
+    perplexity and let decorated AI text read as 'surprising')."""
+    cleaned = _EMOJI_RE.sub("", text.replace("️", ""))
+    return re.sub(r"[ \t]{2,}", " ", cleaned)
+
 
 def _sentences(text: str) -> list[str]:
     return [s.strip() for s in _SENT_SPLIT.split(text) if len(s.strip()) > 1]
@@ -62,14 +80,20 @@ def analyze(text: str) -> list[Signal]:
     lengths = [len(_WORD_RE.findall(s)) for s in sentences]
     mean_len = sum(lengths) / len(lengths)
     cv = _std([float(x) for x in lengths]) / mean_len if mean_len else 0.0
-    # Human prose cv commonly ~0.55-0.9; assistant prose ~0.3-0.5.
-    s_burst = sig_score(cv, center=0.50, scale=0.10, invert=True)
-    signals.append(Signal(
-        "burstiness", "Sentence rhythm", s_burst, 0.5,
-        f"Sentence length variation {cv:.2f} (uniform rhythm reads as AI)",
-        {"cv": round(cv, 3), "mean_sentence_words": round(mean_len, 1),
-         "sentences": len(sentences)},
-    ))
+    if mean_len < 7:
+        # Fragmented/social register (hype posts, headers, bullet blasts):
+        # length variance is register, not authorship — don't score it.
+        signals.append(Signal("burstiness", "Sentence rhythm", None, 0,
+                              "Fragmented register — rhythm not meaningful"))
+    else:
+        # Human prose cv commonly ~0.55-0.9; assistant prose ~0.3-0.5.
+        s_burst = sig_score(cv, center=0.50, scale=0.10, invert=True)
+        signals.append(Signal(
+            "burstiness", "Sentence rhythm", s_burst, 0.5,
+            f"Sentence length variation {cv:.2f} (uniform rhythm reads as AI)",
+            {"cv": round(cv, 3), "mean_sentence_words": round(mean_len, 1),
+             "sentences": len(sentences)},
+        ))
 
     # --- Lexical diversity (windowed type/token ratio to control for length).
     window = 200
@@ -112,6 +136,45 @@ def analyze(text: str) -> list[Signal]:
         {"bullet_frac": round(bullet_frac, 3), "bold_spans": bold,
          "emdash_per_1k_chars": round(emdash, 2)},
     ))
+
+    # --- Em-dash density: assistant prose leans hard on "—" (and spaced "–");
+    # human web text almost never sustains >2 per 1k chars.
+    n_chars = max(len(text), 1)
+    dashes = text.count("—") + text.count("–")
+    dash_rate = 1000 * dashes / n_chars
+    if dashes >= 2:
+        s_dash = sig_score(dash_rate, center=2.0, scale=0.7)
+        signals.append(Signal(
+            "emdash", "Em-dash density", s_dash, 0.6,
+            f"{dashes} em/en-dashes ({dash_rate:.1f} per 1k chars)",
+            {"dashes": dashes, "rate_per_1k": round(dash_rate, 2)},
+        ))
+    else:
+        signals.append(Signal("emdash", "Em-dash density", None, 0,
+                              "Too few dashes to matter"))
+
+    # --- Decoration: structural emoji (✅🚀✨…) and emoji-led lines are the
+    # assistant-listicle fingerprint. Expressive emoji alone score nothing.
+    stripped = text.replace("️", "")
+    emojis = _EMOJI_RE.findall(stripped)
+    if emojis:
+        struct = sum(1 for e in emojis if e in _STRUCT_EMOJI)
+        nonempty = [ln.strip() for ln in stripped.splitlines() if ln.strip()]
+        lead = sum(1 for ln in nonempty if _EMOJI_RE.match(ln)
+                   or (len(ln) > 2 and _EMOJI_RE.match(ln[2:3])))
+        lead_frac = lead / len(nonempty) if nonempty else 0.0
+        metric = 1.5 * (1000 * struct / n_chars) + 10 * lead_frac
+        s_dec = sig_score(metric, center=3.0, scale=1.2)
+        signals.append(Signal(
+            "decoration", "Emoji decoration", s_dec, 0.7,
+            f"{len(emojis)} emoji ({struct} structural), "
+            f"{lead} of {len(nonempty)} lines emoji-led",
+            {"emoji": len(emojis), "structural": struct,
+             "emoji_led_lines": lead, "metric": round(metric, 2)},
+        ))
+    else:
+        signals.append(Signal("decoration", "Emoji decoration", None, 0,
+                              "No emoji present"))
 
     # --- Repetition: recycled trigrams (template-y transitions).
     if n_words >= 60:

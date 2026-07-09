@@ -61,22 +61,50 @@ def _conn() -> sqlite3.Connection:
 
 def init() -> None:
     config.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    _conn().executescript(_SCHEMA)
+    conn = _conn()
+    conn.executescript(_SCHEMA)
+    # Async-job support (video): analyses gain a lifecycle. Older DBs migrate.
+    for ddl in (
+        "ALTER TABLE analyses ADD COLUMN status TEXT NOT NULL DEFAULT 'done'",
+        "ALTER TABLE analyses ADD COLUMN error TEXT",
+    ):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError:
+            pass  # column already exists
+
+
+def update_analysis(analysis_id: str, *, result: dict | None, status: str,
+                    error: str | None = None, duration_ms: int | None = None) -> None:
+    conn = _conn()
+    with conn:
+        conn.execute(
+            """UPDATE analyses SET status = ?, error = ?, percent = ?,
+                      confidence = ?, signals_json = ?, duration_ms = ?
+               WHERE id = ?""",
+            (status, error,
+             (result or {}).get("percent"), (result or {}).get("confidence"),
+             json.dumps((result or {}).get("signals", [])), duration_ms,
+             analysis_id),
+        )
 
 
 def insert_analysis(
     *, analysis_id: str, kind: str, filename: str | None, sha256: str,
     content_text: str | None, content_path: str | None, result: dict,
-    models: dict, duration_ms: int, client_ip: str,
+    models: dict, duration_ms: int, client_ip: str, status: str = "done",
 ) -> None:
     conn = _conn()
     with conn:
         conn.execute(
-            "INSERT INTO analyses VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO analyses (id, created_at, kind, filename, content_sha256,"
+            " content_text, content_path, percent, confidence, signals_json,"
+            " models_json, duration_ms, client_ip, status)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (analysis_id, time.time(), kind, filename, sha256, content_text,
              content_path, result.get("percent"), result.get("confidence"),
              json.dumps(result.get("signals", [])), json.dumps(models),
-             duration_ms, client_ip),
+             duration_ms, client_ip, status),
         )
 
 

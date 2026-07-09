@@ -28,6 +28,18 @@ JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "qwen3-30b-tq")
 IMAGE_ML_ENABLED = os.environ.get("IMAGE_ML_ENABLED", "1") == "1"
 IMAGE_ML_MODEL = os.environ.get("IMAGE_ML_MODEL", "Organika/sdxl-detector")
 
+# Shared-GPU policy: classifier uses the RTX 5060 only when at least this much
+# VRAM is free (arch-router + training own the card), and evicts itself back to
+# CPU after this many idle seconds.
+GPU_MIN_FREE_MB = int(os.environ.get("GPU_MIN_FREE_MB", "2500"))
+GPU_IDLE_EVICT_S = int(os.environ.get("GPU_IDLE_EVICT_S", "600"))
+
+# Video analysis
+MAX_VIDEO_BYTES = 200 * 1024 * 1024
+VIDEO_MAX_SAMPLED_FRAMES = 48     # ~1 fps sampling cap
+VIDEO_ANALYZE_SECONDS = 90        # only the first N seconds are analyzed
+VIDEO_RATE_COST = 5               # one video counts as 5 analyze requests
+
 DATA_DIR = Path(os.environ.get("DATA_DIR", "./data")).resolve()
 UPLOAD_DIR = DATA_DIR / "uploads"
 

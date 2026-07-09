@@ -34,6 +34,7 @@
         <button class="tab active" role="tab" aria-selected="true" data-mode="text">Text</button>
         <button class="tab" role="tab" aria-selected="false" data-mode="document">Document</button>
         <button class="tab" role="tab" aria-selected="false" data-mode="image">Image</button>
+        <button class="tab" role="tab" aria-selected="false" data-mode="video">Video</button>
       </div>
     </div>
 
@@ -65,6 +66,15 @@
       <img id="image-preview" class="hidden" alt="preview of the submitted image">
     </div>
 
+    <div class="panel drop-panel hidden" id="panel-video" role="tabpanel">
+      <div class="dropzone" id="drop-video" tabindex="0">
+        <div class="drop-glyph" aria-hidden="true">▶</div>
+        <p><strong>Drop a video</strong> or click to choose</p>
+        <p class="mono-dim">MP4 · MOV · WEBM · MKV, up to 200&nbsp;MB — provenance, frame-by-frame classification, temporal noise forensics. First 90s analyzed; takes ~10–60s.</p>
+        <input type="file" id="file-video" accept="video/*,.mp4,.mov,.webm,.mkv,.m4v" hidden>
+      </div>
+    </div>
+
     <div class="file-chip hidden" id="file-chip">
       <span id="file-name" class="mono"></span>
       <button id="file-clear" title="remove file" aria-label="remove file">✕</button>
@@ -84,6 +94,7 @@
       perplexity, rank and rhythm statistics — plus stylometry and an LLM judge.
       Images are checked for generator provenance (C2PA, SD/ComfyUI chunks),
       frequency-domain and sensor-noise fingerprints, and a learned classifier.
+      Video adds frame-by-frame classification and temporal noise coherence.
       Signals fuse into one calibrated probability. <strong>No detector is perfect;</strong>
       treat scores near 50% as genuinely uncertain.</p>
     </aside>
