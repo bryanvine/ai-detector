@@ -276,7 +276,9 @@ async def ui_cache_headers(request: Request, call_next):
     no-cache nearly free; the API responses are left untouched."""
     response = await call_next(request)
     path = request.url.path
-    if path == "/" or path.endswith((".js", ".css", ".html")):
+    if path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    elif path == "/" or path.endswith((".js", ".css", ".html")):
         response.headers["Cache-Control"] = "no-cache"
     return response
 

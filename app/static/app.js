@@ -92,7 +92,7 @@ wireDropzone("drop-image", "file-image");
 wireDropzone("drop-video", "file-video");
 
 function takeFile(file) {
-  const maxMb = state.mode === "video" ? 200 : 25;
+  const maxMb = state.mode === "video" ? 100 : 25;
   if (file.size > maxMb * 1024 * 1024)
     return showError(`File too large — ${maxMb} MB max.`);
   state.file = file;
@@ -171,7 +171,10 @@ async function runAnalysis() {
     }
     let data = await resp.json();
     if (!resp.ok) throw new Error(data.detail || `Analysis failed (${resp.status})`);
-    if (data.status === "processing") data = await pollJob(data.id);
+    if (data.status === "processing") {
+      localStorage.setItem("aidet-pending", JSON.stringify({ id: data.id, t: Date.now() }));
+      data = await pollJob(data.id);
+    }
     renderVerdict(data, performance.now() - t0);
     loadStats();
   } catch (err) {
@@ -183,18 +186,62 @@ async function runAnalysis() {
   }
 }
 
-async function pollJob(id, timeoutMs = 5 * 60 * 1000) {
+/* Poll until the server reaches a terminal state. No client-side deadline:
+   background tabs get their timers throttled, so a fixed timeout falsely
+   reported "timed out" on jobs that had long since finished. The pending id
+   is persisted so a reload (or reopened phone) recovers the verdict. */
+async function pollJob(id) {
   const t0 = Date.now();
+  let misses = 0;
   for (;;) {
     await new Promise((r) => setTimeout(r, 2500));
-    if (Date.now() - t0 > timeoutMs) throw new Error("Analysis timed out — try a shorter clip.");
-    const resp = await fetch(`/api/analysis/${id}`);
-    if (!resp.ok) throw new Error("Lost track of the analysis job.");
-    const data = await resp.json();
-    if (data.status === "error") throw new Error(data.error || "Video analysis failed.");
-    if (data.status === "done") return data;
+    let data;
+    try {
+      const resp = await fetch(`/api/analysis/${id}`);
+      if (resp.status === 404) throw new Error("Analysis not found — it may have been cleaned up.");
+      if (!resp.ok) throw { transient: true };
+      data = await resp.json();
+      misses = 0;
+    } catch (err) {
+      if (err instanceof Error) throw err;
+      if (++misses >= 8) throw new Error("Connection lost while waiting — reload to resume.");
+      continue;
+    }
+    if (data.status === "error") {
+      localStorage.removeItem("aidet-pending");
+      throw new Error(data.error || "Video analysis failed.");
+    }
+    if (data.status === "done" || data.status === undefined) {
+      localStorage.removeItem("aidet-pending");
+      return data;
+    }
+    const s = Math.round((Date.now() - t0) / 1000);
+    $("scan-status").textContent =
+      `${$("scan-status").textContent.split(" · ")[0]} · ${s}s elapsed`;
   }
 }
+
+/* Recover a verdict if the tab was closed/asleep while a job ran. */
+(async function resumePending() {
+  try {
+    const pending = JSON.parse(localStorage.getItem("aidet-pending") || "null");
+    if (!pending || Date.now() - pending.t > 30 * 60 * 1000) return;
+    state.mode = "video";
+    state.busy = true;
+    refreshButton();
+    startScanner();
+    $("scan-status").textContent = "reconnecting to your running analysis…";
+    const data = await pollJob(pending.id);
+    renderVerdict(data, Date.now() - pending.t);
+  } catch (err) {
+    showError(err.message || String(err));
+  } finally {
+    state.busy = false;
+    stopScanner();
+    state.mode = "text";
+    refreshButton();
+  }
+})();
 
 /* ---------------- verdict rendering ---------------- */
 function stampFor(pct) {

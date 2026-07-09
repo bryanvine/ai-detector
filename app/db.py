@@ -72,6 +72,14 @@ def init() -> None:
             conn.execute(ddl)
         except sqlite3.OperationalError:
             pass  # column already exists
+    # Jobs run as in-process threads, so any 'processing' row at startup is an
+    # orphan from a restart — fail it so clients stop polling it.
+    with conn:
+        conn.execute(
+            "UPDATE analyses SET status = 'error',"
+            " error = 'Interrupted by a service restart — please resubmit.'"
+            " WHERE status = 'processing'"
+        )
 
 
 def update_analysis(analysis_id: str, *, result: dict | None, status: str,

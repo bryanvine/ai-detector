@@ -34,8 +34,9 @@ IMAGE_ML_MODEL = os.environ.get("IMAGE_ML_MODEL", "Organika/sdxl-detector")
 GPU_MIN_FREE_MB = int(os.environ.get("GPU_MIN_FREE_MB", "2500"))
 GPU_IDLE_EVICT_S = int(os.environ.get("GPU_IDLE_EVICT_S", "600"))
 
-# Video analysis
-MAX_VIDEO_BYTES = 200 * 1024 * 1024
+# Video analysis. NB: Cloudflare's free plan rejects request bodies >100 MB,
+# so a bigger origin-side cap would just fail confusingly at the edge.
+MAX_VIDEO_BYTES = 100 * 1024 * 1024
 VIDEO_MAX_SAMPLED_FRAMES = 48     # ~1 fps sampling cap
 VIDEO_ANALYZE_SECONDS = 90        # only the first N seconds are analyzed
 VIDEO_RATE_COST = 5               # one video counts as 5 analyze requests
