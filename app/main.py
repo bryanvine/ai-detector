@@ -269,6 +269,18 @@ async def health():
     return {"ok": True, "service": "ai-detector"}
 
 
+@app.middleware("http")
+async def ui_cache_headers(request: Request, call_next):
+    """Keep Cloudflare and browsers from pinning stale UI assets (CF caches
+    .js/.css by extension with a 4h TTL by default). ETag revalidation makes
+    no-cache nearly free; the API responses are left untouched."""
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.endswith((".js", ".css", ".html")):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 @app.exception_handler(Exception)
 async def unhandled(request: Request, exc: Exception):
     log.exception("unhandled error on %s", request.url.path)
