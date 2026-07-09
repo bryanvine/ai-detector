@@ -293,6 +293,48 @@ textarea::placeholder { color: rgba(154, 160, 147, 0.6); }
 .colophon a { color: var(--bone); text-decoration: none; border-bottom: 1px solid var(--hairline); }
 .colophon a:hover { border-color: var(--bone); }
 
+/* ---------------- mobile / PWA ---------------- */
+@media (max-width: 620px) {
+  body { font-size: 13px; }
+  .masthead {
+    flex-direction: column; gap: 6px; align-items: flex-start;
+    padding: 14px 18px 12px;
+    padding-top: calc(14px + env(safe-area-inset-top));
+  }
+  .wordmark { gap: 10px; flex-wrap: wrap; }
+  .wordmark h1 { font-size: 22px; }
+  .unit { font-size: 9.5px; letter-spacing: 0.14em; }
+
+  .console { padding: 20px 16px 28px; }
+  .verdict { padding: 26px 16px 36px; }
+
+  .console-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .tab { padding: 12px 4px; text-align: center; font-size: 11px; }
+
+  /* 16px stops iOS Safari from zooming the page on focus */
+  textarea, .feedback-extra input { font-size: 16px; }
+  textarea { min-height: 220px; }
+  .dropzone { min-height: 190px; padding: 20px 14px; }
+
+  .analyze { padding: 15px 16px; }
+  .analyze .btn-label { font-size: 14px; }
+
+  .pct { font-size: 64px; }
+  .stamp { font-size: 16px; padding: 5px 14px; }
+  .signals li { grid-template-columns: 1fr 72px; }
+  .stamps { display: grid; grid-template-columns: 1fr 1fr; }
+  .stamps button { padding: 12px 8px; }
+  .feedback-extra { flex-direction: column; }
+  .feedback-extra button { padding: 12px; }
+
+  .method-note { display: none; }   /* keep the phone view focused on the tool */
+  .colophon {
+    padding: 12px 18px calc(16px + env(safe-area-inset-bottom));
+    font-size: 10px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

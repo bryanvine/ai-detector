@@ -2,13 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DETECTOR — is it AI-generated?</title>
-<meta name="description" content="Forensic analysis of text, documents and images: probability the content was AI-generated, with per-signal evidence.">
+<meta name="description" content="Forensic analysis of text, documents, images and video: probability the content was AI-generated, with per-signal evidence.">
+<meta name="theme-color" content="#0f1411">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DETECTOR">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700;9..144,900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=3">
+<link rel="stylesheet" href="/styles.css?v=4">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◉</text></svg>">
 </head>
 <body>
@@ -60,7 +66,7 @@
       <div class="dropzone" id="drop-image" tabindex="0">
         <div class="drop-glyph" aria-hidden="true">▣</div>
         <p><strong>Drop an image</strong> or click to choose</p>
-        <p class="mono-dim">PNG · JPEG · WEBP · TIFF — provenance metadata, spectral &amp; noise forensics, ML classifier.</p>
+        <p class="mono-dim">PNG · JPEG · WEBP · TIFF — provenance metadata, spectral &amp; noise forensics, ML classifier. You can also paste (Ctrl/Cmd-V) an image anywhere.</p>
         <input type="file" id="file-image" accept="image/*" hidden>
       </div>
       <img id="image-preview" class="hidden" alt="preview of the submitted image">
@@ -174,6 +180,6 @@
   <a href="https://github.com/bryanvine/ai-detector" rel="noopener">source ↗</a>
 </footer>
 
-<script src="/app.js?v=3"></script>
+<script src="/app.js?v=4"></script>
 </body>
 </html>

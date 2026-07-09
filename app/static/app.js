@@ -369,6 +369,24 @@ $("feedback-send").addEventListener("click", async () => {
   }
 });
 
+/* Paste an image anywhere on the page — jumps to the Image tab with it loaded. */
+document.addEventListener("paste", (e) => {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith("image/")) {
+      e.preventDefault();
+      const blob = item.getAsFile();
+      if (!blob) return;
+      const ext = (item.type.split("/")[1] || "png").replace("jpeg", "jpg");
+      const file = new File([blob], `pasted-image.${ext}`, { type: item.type });
+      if (state.mode !== "image") document.querySelector('.tab[data-mode="image"]').click();
+      takeFile(file);
+      return;
+    }
+  }
+});
+
 /* ---------------- misc ---------------- */
 function showError(msg) {
   const box = $("error-box");
@@ -386,3 +404,7 @@ async function loadStats() {
 }
 loadStats();
 refreshButton();
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
