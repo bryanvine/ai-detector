@@ -432,6 +432,25 @@ document.addEventListener("paste", (e) => {
   }
 });
 
+/* Enter runs the analysis when a specimen is ready (e.g. right after pasting
+   an image). Inside the textarea plain Enter stays a newline — use Ctrl/Cmd+Enter
+   there. Enter in the feedback field submits the feedback instead. */
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const t = e.target;
+  if (t === $("source-hint")) {
+    e.preventDefault();
+    $("feedback-send").click();
+    return;
+  }
+  if (t === textInput && !(e.ctrlKey || e.metaKey)) return;
+  if (t.tagName === "BUTTON" || t.tagName === "A") return;
+  if (!$("analyze-btn").disabled) {
+    e.preventDefault();
+    runAnalysis();
+  }
+});
+
 /* ---------------- misc ---------------- */
 function showError(msg) {
   const box = $("error-box");

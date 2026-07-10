@@ -2,8 +2,8 @@
    Network-first for everything; the cache exists only as an offline fallback
    for the app shell. /api is never cached (we have scar tissue about caches
    serving stale "processing" states). Bump VERSION on asset changes. */
-const VERSION = "aidet-v4";
-const SHELL = ["/", "/styles.css?v=5", "/app.js?v=5", "/manifest.webmanifest"];
+const VERSION = "aidet-v5";
+const SHELL = ["/", "/styles.css?v=6", "/app.js?v=6", "/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
